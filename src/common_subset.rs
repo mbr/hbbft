@@ -8,6 +8,7 @@ use agreement;
 use agreement::{Agreement, AgreementMessage};
 use broadcast;
 use broadcast::{Broadcast, BroadcastMessage};
+use faulty_node::FaultyNodeLog;
 use fmt::HexBytes;
 use messaging::{DistAlgorithm, NetworkInfo, TargetedMessage};
 
@@ -99,6 +100,8 @@ pub struct CommonSubset<NodeUid> {
     output: Option<BTreeMap<NodeUid, ProposedValue>>,
     /// Whether the instance has decided on a value.
     decided: bool,
+    /// A log of all occurences of faulty Node behaviour.
+    fault_log: FaultyNodeLog<NodeUid>,
 }
 
 impl<NodeUid: Clone + Debug + Ord> DistAlgorithm for CommonSubset<NodeUid> {
@@ -143,6 +146,10 @@ impl<NodeUid: Clone + Debug + Ord> DistAlgorithm for CommonSubset<NodeUid> {
     fn our_id(&self) -> &Self::NodeUid {
         self.netinfo.our_uid()
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<NodeUid> {
+        &self.fault_log
+    }
 }
 
 impl<NodeUid: Clone + Debug + Ord> CommonSubset<NodeUid> {
@@ -174,6 +181,7 @@ impl<NodeUid: Clone + Debug + Ord> CommonSubset<NodeUid> {
             messages: MessageQueue(VecDeque::new()),
             output: None,
             decided: false,
+            fault_log: FaultyNodeLog::new(),
         })
     }
 

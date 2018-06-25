@@ -12,6 +12,7 @@ use itertools::Itertools;
 use agreement::bin_values::BinValues;
 use common_coin;
 use common_coin::{CommonCoin, CommonCoinMessage};
+use faulty_node::FaultyNodeLog;
 use messaging::{DistAlgorithm, NetworkInfo, Target, TargetedMessage};
 
 error_chain!{
@@ -123,6 +124,8 @@ pub struct Agreement<NodeUid> {
     common_coin: CommonCoin<NodeUid, Nonce>,
     /// Common coin schedule computed at the start of each epoch.
     coin_schedule: CoinSchedule,
+    /// A log of all occurences of faulty Node behaviour.
+    fault_log: FaultyNodeLog<NodeUid>,
 }
 
 impl<NodeUid: Clone + Debug + Ord> DistAlgorithm for Agreement<NodeUid> {
@@ -179,6 +182,10 @@ impl<NodeUid: Clone + Debug + Ord> DistAlgorithm for Agreement<NodeUid> {
     fn our_id(&self) -> &Self::NodeUid {
         self.netinfo.our_uid()
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<NodeUid> {
+        &self.fault_log
+    }
 }
 
 impl<NodeUid: Clone + Debug + Ord> Agreement<NodeUid> {
@@ -212,6 +219,7 @@ impl<NodeUid: Clone + Debug + Ord> Agreement<NodeUid> {
                     Nonce::new(invocation_id.as_ref(), session_id, proposer_i, 0),
                 ),
                 coin_schedule: CoinSchedule::True,
+                fault_log: FaultyNodeLog::new(),
             })
         } else {
             Err(ErrorKind::UnknownProposer.into())

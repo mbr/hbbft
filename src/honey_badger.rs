@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use common_subset::{self, CommonSubset};
 use crypto::{Ciphertext, DecryptionShare};
+use faulty_node::{FaultKind, FaultyNodeLog};
 use messaging::{DistAlgorithm, NetworkInfo, Target, TargetedMessage};
 
 error_chain!{
@@ -59,6 +60,8 @@ pub struct HoneyBadger<Tx, NodeUid> {
     decrypted_selections: BTreeMap<NodeUid, Vec<u8>>,
     /// Ciphertexts output by Common Subset in an epoch.
     ciphertexts: BTreeMap<u64, BTreeMap<NodeUid, Ciphertext>>,
+    /// A log of all occurences of faulty Node behaviour.
+    fault_log: FaultyNodeLog<NodeUid>,
 }
 
 impl<Tx, NodeUid> DistAlgorithm for HoneyBadger<Tx, NodeUid>
@@ -114,6 +117,10 @@ where
     fn our_id(&self) -> &NodeUid {
         self.netinfo.our_uid()
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<NodeUid> {
+        &self.fault_log
+    }
 }
 
 // TODO: Use a threshold encryption scheme to encrypt the proposed transactions.
@@ -142,6 +149,7 @@ where
             received_shares: BTreeMap::new(),
             decrypted_selections: BTreeMap::new(),
             ciphertexts: BTreeMap::new(),
+            fault_log: FaultyNodeLog::new(),
         };
         honey_badger.propose()?;
         Ok(honey_badger)
@@ -235,7 +243,11 @@ where
             .and_then(|cts| cts.get(&proposer_id))
         {
             if !self.verify_decryption_share(sender_id, &share, ciphertext) {
-                // TODO: Log the incorrect sender.
+                self.fault_log.append(
+                    sender_id,
+                    FaultKind::IncorrectDecryptionShareSender,
+                    self.epoch
+                );
                 return Ok(());
             }
         }
@@ -409,7 +421,11 @@ where
                 ciphertext = ct;
             } else {
                 warn!("Invalid ciphertext from proposer {:?} ignored", proposer_id);
-                // TODO: Log the incorrect node `j`.
+                self.fault_log.append(
+                    &proposer_id,
+                    FaultKind::InvalidCiphertext,
+                    self.epoch
+                );
                 continue;
             }
             let incorrect_senders =
@@ -432,7 +448,11 @@ where
                 self.handle_decryption_share_message(&our_id, epoch, proposer_id.clone(), share)?;
             } else {
                 warn!("Share decryption failed for proposer {:?}", proposer_id);
-                // TODO: Log the decryption failure.
+                self.fault_log.append(
+                    &proposer_id,
+                    FaultKind::ShareDecryptionFailed,
+                    self.epoch
+                );
                 continue;
             }
             let ciphertexts = self

@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use crypto::error as cerror;
 use crypto::Signature;
+use faulty_node::FaultyNodeLog;
 use messaging::{DistAlgorithm, NetworkInfo, Target, TargetedMessage};
 
 error_chain! {
@@ -54,6 +55,8 @@ pub struct CommonCoin<NodeUid, T> {
     had_input: bool,
     /// Termination flag.
     terminated: bool,
+    /// A log of all occurences of faulty Node behaviour.
+    fault_log: FaultyNodeLog<NodeUid>,
 }
 
 impl<NodeUid, T> DistAlgorithm for CommonCoin<NodeUid, T>
@@ -106,6 +109,10 @@ where
     fn our_id(&self) -> &Self::NodeUid {
         self.netinfo.our_uid()
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<NodeUid> {
+        &self.fault_log
+    }
 }
 
 impl<NodeUid, T> CommonCoin<NodeUid, T>
@@ -122,6 +129,7 @@ where
             received_shares: BTreeMap::new(),
             had_input: false,
             terminated: false,
+            fault_log: FaultyNodeLog::new(),
         }
     }
 

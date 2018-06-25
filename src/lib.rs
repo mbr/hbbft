@@ -120,6 +120,7 @@ pub mod broadcast;
 pub mod common_coin;
 pub mod common_subset;
 pub mod crypto;
+pub mod faulty_node;
 mod fmt;
 pub mod honey_badger;
 pub mod messaging;

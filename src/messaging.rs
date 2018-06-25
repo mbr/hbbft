@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use clear_on_drop::ClearOnDrop;
 
 use crypto::{PublicKeySet, SecretKey};
+use faulty_node::FaultyNodeLog;
 
 /// Message sent by a given source.
 #[derive(Clone, Debug)]
@@ -101,6 +102,8 @@ pub trait DistAlgorithm {
     {
         OutputIter { algorithm: self }
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<Self::NodeUid>;
 }
 
 /// An iterator over a distributed algorithm's outgoing messages.

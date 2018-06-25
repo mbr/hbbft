@@ -9,6 +9,7 @@ use reed_solomon_erasure as rse;
 use reed_solomon_erasure::ReedSolomon;
 use ring::digest;
 
+use faulty_node::FaultyNodeLog;
 use fmt::{HexBytes, HexList, HexProof};
 use messaging::{DistAlgorithm, NetworkInfo, Target, TargetedMessage};
 
@@ -111,6 +112,8 @@ pub struct Broadcast<NodeUid> {
     messages: VecDeque<TargetedMessage<BroadcastMessage, NodeUid>>,
     /// The output, if any.
     output: Option<Vec<u8>>,
+    /// A log of all occurences of faulty Node behaviour.
+    fault_log: FaultyNodeLog<NodeUid>,
 }
 
 impl<NodeUid: Debug + Clone + Ord> DistAlgorithm for Broadcast<NodeUid> {
@@ -164,6 +167,10 @@ impl<NodeUid: Debug + Clone + Ord> DistAlgorithm for Broadcast<NodeUid> {
     fn our_id(&self) -> &NodeUid {
         self.netinfo.our_uid()
     }
+
+    fn get_fault_log(&self) -> &FaultyNodeLog<NodeUid> {
+        &self.fault_log
+    }
 }
 
 impl<NodeUid: Debug + Clone + Ord> Broadcast<NodeUid> {
@@ -186,6 +193,7 @@ impl<NodeUid: Debug + Clone + Ord> Broadcast<NodeUid> {
             readys: BTreeMap::new(),
             messages: VecDeque::new(),
             output: None,
+            fault_log: FaultyNodeLog::new(),
         })
     }
 
